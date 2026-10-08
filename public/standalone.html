@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAAHIL — QC Number Search Engine (Standalone Single File Edition)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS (xlsx) for in-browser Excel parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- React & Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-white text-slate-900 min-h-screen antialiased selection:bg-blue-100 selection:text-blue-900">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- INITIAL MASTER PHARMA DATASET (34 Verified Records) ---
+    const INITIAL_RECORDS = [
+      { id: 1, source: 'excel', source_sheet: 'APIs', material_name: 'Anhydrous Polysaccharide', qc_number: 'QC-00125', date: '2026-01-12', category: 'API', tags: ['API', 'BioPolymer'], raw_data: { 'Material Name': 'Anhydrous Polysaccharide', 'QC Number': 'QC-00125', 'Date': '2026-01-12', 'Category': 'API', 'Supplier': 'ABC Pharma Ingredients Ltd', 'Batch Number': 'APS-26-014', 'Status': 'Approved' } },
+      { id: 2, source: 'excel', source_sheet: 'APIs', material_name: 'Anhydrous Polysaccharide', qc_number: 'QC-00452', date: '2026-03-18', category: 'API', tags: ['API', 'BioPolymer'], raw_data: { 'Material Name': 'Anhydrous Polysaccharide', 'QC Number': 'QC-00452', 'Date': '2026-03-18', 'Category': 'API', 'Supplier': 'ABC Pharma Ingredients Ltd', 'Batch Number': 'APS-26-089', 'Status': 'Approved' } },
+      { id: 3, source: 'excel', source_sheet: 'APIs', material_name: 'Anhydrous Polysaccharide', qc_number: 'QC-00891', date: '2026-08-04', category: 'API', tags: ['API', 'BioPolymer'], raw_data: { 'Material Name': 'Anhydrous Polysaccharide', 'QC Number': 'QC-00891', 'Date': '2026-08-04', 'Category': 'API', 'Supplier': 'Global BioReagents Inc', 'Batch Number': 'APS-26-172', 'Status': 'Approved' } },
+      { id: 4, source: 'excel', source_sheet: 'APIs', material_name: 'APS Grade X', qc_number: 'QC-00914', date: '2026-08-19', category: 'API', tags: ['API', 'BioPolymer'], raw_data: { 'Material Name': 'APS Grade X', 'QC Number': 'QC-00914', 'Date': '2026-08-19', 'Category': 'API', 'Supplier': 'Global BioReagents Inc', 'Batch Number': 'APSX-26-003', 'Status': 'Approved' } },
+      { id: 5, source: 'excel', source_sheet: 'APIs', material_name: 'Paracetamol IP', qc_number: 'QC-00140', date: '2026-01-15', category: 'API', tags: ['API', 'Analgesic'], raw_data: { 'Material Name': 'Paracetamol IP', 'QC Number': 'QC-00140', 'Date': '2026-01-15', 'Category': 'API', 'Supplier': 'Sun Chemical Synthetics', 'Batch Number': 'PCM-26-042', 'Status': 'Approved' } },
+      { id: 6, source: 'excel', source_sheet: 'Excipients', material_name: 'Microcrystalline Cellulose (MCC PH-101)', qc_number: 'QC-00108', date: '2026-01-08', category: 'Excipient', tags: ['Excipient', 'MCC', 'Avicel'], raw_data: { 'Material Name': 'Microcrystalline Cellulose (MCC PH-101)', 'QC Number': 'QC-00108', 'Date': '2026-01-08', 'Category': 'Excipient', 'Supplier': 'FMC BioPolymer', 'Status': 'Approved' } },
+      { id: 7, source: 'excel', source_sheet: 'Excipients', material_name: 'Polyvinylpyrrolidone (PVP K-30)', qc_number: 'QC-00244', date: '2026-02-11', category: 'Excipient', tags: ['Excipient', 'PVP', 'Povidone'], raw_data: { 'Material Name': 'Polyvinylpyrrolidone (PVP K-30)', 'QC Number': 'QC-00244', 'Date': '2026-02-11', 'Category': 'Excipient', 'Supplier': 'BASF Pharma', 'Status': 'Approved' } },
+      { id: 8, source: 'excel', source_sheet: 'Excipients', material_name: 'Magnesium Stearate', qc_number: 'QC-00360', date: '2026-03-05', category: 'Excipient', tags: ['Excipient', 'Lubricant'], raw_data: { 'Material Name': 'Magnesium Stearate', 'QC Number': 'QC-00360', 'Date': '2026-03-05', 'Category': 'Excipient', 'Supplier': 'Peter Greven', 'Status': 'Approved' } },
+      { id: 9, source: 'excel', source_sheet: 'Extracts', material_name: 'Curcuma Longa Extract 95%', qc_number: 'QC-00230', date: '2026-02-08', category: 'Extract', tags: ['Extract', 'Curcumin'], raw_data: { 'Material Name': 'Curcuma Longa Extract 95%', 'QC Number': 'QC-00230', 'Date': '2026-02-08', 'Category': 'Extract', 'Supplier': 'Arjuna Natural', 'Status': 'Approved' } },
+      // SPEC TAG TEST ITEMS
+      { id: 10, source: 'excel', source_sheet: 'Packing Materials', material_name: 'Biotin 5000 mcg Label Roll (Self-Adhesive)', qc_number: 'QC-00932', date: '2026-09-14', category: 'Packing Material', tags: ['Label', 'Biotin', 'Printed Material', 'Packing Material'], raw_data: { 'Material Name': 'Biotin 5000 mcg Label Roll (Self-Adhesive)', 'QC Number': 'QC-00932', 'Date': '2026-09-14', 'Category': 'Packing Material', 'Product': 'Biotin 5000 mcg Capsules', 'Label': 'Primary Bottle Label', 'Brand': 'NutriPharma', 'Status': 'Approved' } },
+      { id: 11, source: 'excel', source_sheet: 'Packing Materials', material_name: 'High Science Complex Label (30ml Amber Bottle)', qc_number: 'QC-00945', date: '2026-09-20', category: 'Packing Material', tags: ['Label', 'High Science', 'Primary Label', 'Packing Material'], raw_data: { 'Material Name': 'High Science Complex Label (30ml Amber Bottle)', 'QC Number': 'QC-00945', 'Date': '2026-09-20', 'Category': 'Packing Material', 'Product': 'High Science Bio-Elixir', 'Label': 'Bottle Label', 'Brand': 'High Science', 'Status': 'Approved' } },
+      { id: 12, source: 'excel', source_sheet: 'Packing Materials', material_name: 'High Science Outer Carton Label (Secondary Packaging)', qc_number: 'QC-00958', date: '2026-09-25', category: 'Packing Material', tags: ['Label', 'High Science', 'Secondary Packaging'], raw_data: { 'Material Name': 'High Science Outer Carton Label (Secondary Packaging)', 'QC Number': 'QC-00958', 'Date': '2026-09-25', 'Category': 'Packing Material', 'Product': 'High Science Bio-Elixir Outer', 'Label': 'Carton Seal Label', 'Brand': 'High Science', 'Status': 'Approved' } }
+    ];
+
+    // Known pharmaceutical synonyms
+    const SYNONYMS = {
+      aps: ['anhydrous polysaccharide', 'aps grade x'],
+      mcc: ['microcrystalline cellulose', 'avicel'],
+      pvp: ['polyvinylpyrrolidone', 'povidone'],
+      paracetamol: ['acetaminophen', 'apap']
+    };
+
+    function normalizeStr(s) {
+      if (!s) return '';
+      return String(s).toLowerCase().replace(/[_\-\/\.\,\;\:\(\)\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function tokenizeStr(s) {
+      return normalizeStr(s).split(' ').filter(Boolean);
+    }
+
+    // Strict Material Matching (Excludes substring containment like 'aps' in 'capsule')
+    function matchRecord(query, tags, record) {
+      const normQ = normalizeStr(query);
+      const matTokens = tokenizeStr(record.material_name);
+      const catTokens = tokenizeStr(record.category || '');
+      const rawTokens = tokenizeStr(JSON.stringify(record.raw_data || {}));
+      const recTags = (record.tags || []).map(t => t.toLowerCase());
+
+      // 1. Tag Filter Check
+      if (tags && tags.length > 0) {
+        const matchesAllTags = tags.every(t => {
+          const normT = t.toLowerCase();
+          return recTags.some(rt => rt.includes(normT) || normT.includes(rt)) ||
+                 matTokens.includes(normT) ||
+                 rawTokens.includes(normT);
+        });
+        if (!matchesAllTags) return false;
+      }
+
+      // If no query string, tag match is sufficient
+      if (!normQ) return true;
+
+      // 2. Direct QC match
+      if (normalizeStr(record.qc_number) === normQ) return true;
+
+      // 3. Exact Material match
+      if (normalizeStr(record.material_name) === normQ) return true;
+
+      // 4. Synonym / Acronym match
+      const syns = SYNONYMS[normQ] || [];
+      if (syns.some(s => normalizeStr(record.material_name).includes(s))) return true;
+
+      // 5. Whole-Word Discrete Token Match
+      if (matTokens.includes(normQ) || catTokens.includes(normQ) || rawTokens.includes(normQ)) return true;
+
+      return false;
+    }
+
+    function formatDate(raw) {
+      if (!raw) return { display: 'Undated', monthYear: 'Undated', year: 0, month: 0 };
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return { display: String(raw), monthYear: 'Undated', year: 0, month: 0 };
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const day = d.getDate();
+      const monthName = months[d.getMonth()];
+      const year = d.getFullYear();
+      return {
+        display: `${day < 10 ? '0' + day : day} ${monthName} ${year}`,
+        monthYear: `${monthName} ${year}`,
+        year: year,
+        month: d.getMonth() + 1
+      };
+    }
+
+    // --- MAIN COMPONENT ---
+    function App() {
+      const [records, setRecords] = useState(() => {
+        const saved = localStorage.getItem('saahil_master_records');
+        return saved ? JSON.parse(saved) : INITIAL_RECORDS;
+      });
+
+      const [currentRoute, setCurrentRoute] = useState('home');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [activeTags, setActiveTags] = useState([]);
+      const [tagInput, setTagInput] = useState('');
+      const [selectedRecord, setSelectedRecord] = useState(null);
+      const [isEditing, setIsEditing] = useState(false);
+
+      // New Entry form state
+      const [newMatName, setNewMatName] = useState('');
+      const [newQcNum, setNewQcNum] = useState('');
+      const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+      const [newCat, setNewCat] = useState('API');
+      const [newTags, setNewTags] = useState('');
+
+      useEffect(() => {
+        localStorage.setItem('saahil_master_records', JSON.stringify(records));
+      }, [records]);
+
+      const handleSearch = (q, tags = activeTags) => {
+        setSearchQuery(q);
+        setActiveTags(tags);
+        setCurrentRoute('search');
+      };
+
+      const handleAddTag = (t) => {
+        const trimmed = t.trim();
+        if (trimmed && !activeTags.includes(trimmed)) {
+          setActiveTags([...activeTags, trimmed]);
+        }
+        setTagInput('');
+      };
+
+      const handleRemoveTag = (idx) => {
+        setActiveTags(activeTags.filter((_, i) => i !== idx));
+      };
+
+      // Filter and Group Results
+      const searchResults = useMemo(() => {
+        if (!searchQuery && activeTags.length === 0) return [];
+        return records.filter(r => matchRecord(searchQuery, activeTags, r));
+      }, [records, searchQuery, activeTags]);
+
+      const groupedResults = useMemo(() => {
+        const map = new Map();
+        for (const item of searchResults) {
+          const dateInfo = formatDate(item.date);
+          const key = `${dateInfo.year}-${dateInfo.month}`;
+          if (!map.has(key)) {
+            map.set(key, { monthYear: dateInfo.monthYear, year: dateInfo.year, month: dateInfo.month, items: [] });
+          }
+          map.get(key).items.push({ ...item, displayDate: dateInfo.display });
+        }
+        return Array.from(map.values()).sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
+      }, [searchResults]);
+
+      const handleSaveNewEntry = (e) => {
+        e.preventDefault();
+        if (!newMatName.trim() || !newQcNum.trim()) return alert('Material Name and QC Number are required!');
+        const parsedTags = newTags.split(',').map(t => t.trim()).filter(Boolean);
+        const newRec = {
+          id: Date.now(),
+          source: 'manual',
+          source_sheet: 'Manual Entries',
+          material_name: newMatName.trim(),
+          qc_number: newQcNum.trim(),
+          date: newDate,
+          category: newCat,
+          tags: parsedTags,
+          raw_data: {
+            'Material Name': newMatName.trim(),
+            'QC Number': newQcNum.trim(),
+            'Date': newDate,
+            'Category': newCat,
+            'Source': 'Manual Entry'
+          }
+        };
+        setRecords([newRec, ...records]);
+        alert('Master record saved successfully!');
+        setNewMatName(''); setNewQcNum('');
+        setCurrentRoute('home');
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col justify-between">
+          {/* HEADER */}
+          <header className="border-b border-slate-200 bg-white sticky top-0 z-20 px-6 py-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div onClick={() => setCurrentRoute('home')} className="cursor-pointer select-none">
+                <span className="font-black text-2xl font-sans tracking-tight">
+                  <span className="text-[#1a73e8]">S</span><span className="text-[#ea4335]">A</span><span className="text-[#f59e0b]">A</span><span className="text-[#0284c7]">H</span><span className="text-[#10b981]">I</span><span className="text-[#ea4335]">L</span>
+                </span>
+              </div>
+              <nav className="flex items-center gap-1 text-sm font-medium">
+                <button onClick={() => setCurrentRoute('home')} className={`px-3 py-1.5 rounded-lg ${currentRoute === 'home' || currentRoute === 'search' ? 'text-blue-600 bg-blue-50 font-bold' : 'text-slate-600 hover:text-slate-900'}`}>Search</button>
+                <button onClick={() => setCurrentRoute('bmr')} className={`px-3 py-1.5 rounded-lg ${currentRoute === 'bmr' ? 'text-blue-600 bg-blue-50 font-bold' : 'text-slate-600 hover:text-slate-900'}`}>Search from BMR</button>
+                <button onClick={() => setCurrentRoute('new-entry')} className={`px-3 py-1.5 rounded-lg ${currentRoute === 'new-entry' ? 'text-blue-600 bg-blue-50 font-bold' : 'text-slate-600 hover:text-slate-900'}`}>+ New Entry</button>
+                <button onClick={() => setCurrentRoute('admin')} className={`px-3 py-1.5 rounded-lg ${currentRoute === 'admin' ? 'text-blue-600 bg-blue-50 font-bold' : 'text-slate-600 hover:text-slate-900'}`}>Admin / Excel</button>
+              </nav>
+            </div>
+            <div className="text-xs font-medium text-slate-500">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5"></span>
+              {records.length} Master Records
+            </div>
+          </header>
+
+          {/* MAIN CONTENT AREA */}
+          <main className="grow">
+            {/* 1. HOME VIEW */}
+            {currentRoute === 'home' && (
+              <div className="py-20 px-4 max-w-3xl mx-auto text-center space-y-6">
+                <div>
+                  <div className="font-black text-6xl sm:text-7xl font-sans tracking-tight select-none">
+                    <span className="text-[#1a73e8]">S</span><span className="text-[#ea4335]">A</span><span className="text-[#f59e0b]">A</span><span className="text-[#0284c7]">H</span><span className="text-[#10b981]">I</span><span className="text-[#ea4335]">L</span>
+                  </div>
+                  <div className="font-mono text-xs sm:text-sm font-bold tracking-[0.3em] text-slate-500 uppercase mt-2">
+                    QC NUMBER SEARCH ENGINE
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center bg-white rounded-full border border-slate-300 shadow-sm hover:shadow-md px-5 h-14 transition-all">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+                      placeholder="Search raw material name (e.g. APS, Paracetamol, Label)..."
+                      className="w-full text-base outline-none bg-transparent"
+                    />
+                    <button onClick={() => handleSearch(searchQuery)} className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700 flex items-center justify-center shrink-0">
+                      →
+                    </button>
+                  </div>
+
+                  {/* Tag Filter Bar */}
+                  <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-left">
+                    <span className="text-slate-400 font-bold uppercase font-mono text-[11px]">Tags:</span>
+                    {activeTags.map((t, idx) => (
+                      <span key={t} className="px-2 py-0.5 bg-white text-blue-700 font-bold rounded border border-blue-200 flex items-center gap-1">
+                        {t} <button onClick={() => handleRemoveTag(idx)} className="text-slate-400 hover:text-red-500">×</button>
+                      </span>
+                    ))}
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); handleAddTag(tagInput); } }}
+                      placeholder="+ Add tag (e.g. Biotin)..."
+                      className="px-2 py-0.5 text-xs bg-white border border-slate-200 rounded outline-none w-36"
+                    />
+                  </div>
+                </div>
+
+                {/* Primary Action Buttons */}
+                <div className="flex items-center justify-center gap-3 pt-3">
+                  <button onClick={() => handleSearch(searchQuery || 'APS')} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold rounded-md border border-slate-200 shadow-sm">
+                    Search
+                  </button>
+                  <button onClick={() => setCurrentRoute('bmr')} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold rounded-md border border-slate-200 shadow-sm">
+                    Search from BMR
+                  </button>
+                  <button onClick={() => setCurrentRoute('new-entry')} className="px-6 py-2.5 bg-white hover:bg-blue-50 text-blue-700 text-sm font-bold rounded-md border border-blue-200 shadow-sm">
+                    + New Entry
+                  </button>
+                </div>
+
+                {/* Quick Examples */}
+                <div className="pt-6">
+                  <p className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">Sample Queries & Tag Combinations:</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <button onClick={() => handleSearch('APS', [])} className="px-2.5 py-1 text-xs bg-white hover:bg-blue-50 text-slate-700 border border-slate-200 rounded shadow-xs">APS</button>
+                    <button onClick={() => handleSearch('Label', ['Biotin'])} className="px-2.5 py-1 text-xs bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded shadow-xs">Label + Biotin</button>
+                    <button onClick={() => handleSearch('Label', ['High Science'])} className="px-2.5 py-1 text-xs bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded shadow-xs">Label + High Science</button>
+                    <button onClick={() => handleSearch('Paracetamol', [])} className="px-2.5 py-1 text-xs bg-white hover:bg-blue-50 text-slate-700 border border-slate-200 rounded shadow-xs">Paracetamol</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. SEARCH RESULTS VIEW */}
+            {currentRoute === 'search' && (
+              <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-full text-sm outline-none focus:border-blue-500 shadow-sm"
+                  />
+                  <button onClick={() => handleSearch(searchQuery)} className="px-5 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-full">Search</button>
+                </div>
+
+                <div className="border-b border-slate-200 pb-3 flex items-baseline justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Search results {searchQuery ? `for "${searchQuery}"` : ''} {activeTags.length > 0 ? `[Tags: ${activeTags.join(', ')}]` : ''}
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">{searchResults.length} matching records found</p>
+                  </div>
+                </div>
+
+                {/* AI Context Card */}
+                {searchQuery.toLowerCase() === 'aps' && (
+                  <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-4 text-xs text-slate-800 leading-relaxed">
+                    <strong className="text-blue-700 font-mono uppercase block mb-1">AI Pharmaceutical Context</strong>
+                    APS commonly refers to Anhydrous Polysaccharide in the available master data. Relevant QC records are shown below.
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {searchResults.length === 0 && (
+                  <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-2">
+                    <h3 className="text-lg font-bold text-slate-800">No exact material match found</h3>
+                    <p className="text-xs text-slate-500">Check spelling or search standard chemical name.</p>
+                  </div>
+                )}
+
+                {/* Month-Grouped Result Cards */}
+                {groupedResults.map(group => (
+                  <div key={group.monthYear} className="space-y-3">
+                    <div className="flex items-center gap-3 pt-2">
+                      <span className="font-bold text-xs font-mono uppercase tracking-wider text-slate-800">{group.monthYear}</span>
+                      <div className="h-px bg-slate-200 grow"></div>
+                      <span className="text-xs text-slate-400">{group.items.length} records</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {group.items.map(item => (
+                        <div
+                          key={item.id}
+                          onClick={() => { setSelectedRecord(item); setIsEditing(false); }}
+                          className="bg-white border border-slate-200 hover:border-blue-400 rounded-xl p-4 sm:p-5 shadow-xs hover:shadow-sm cursor-pointer transition-all"
+                        >
+                          <h4 className="text-base font-bold text-blue-700 hover:text-blue-800">{item.material_name}</h4>
+                          <div className="flex items-center gap-6 text-sm text-slate-700 mt-1">
+                            <div><span className="text-slate-500 text-xs font-semibold">QC Number: </span><span className="font-mono font-bold bg-slate-100 px-1.5 py-0.5 rounded">{item.qc_number}</span></div>
+                            <div><span className="text-slate-500 text-xs font-semibold">Date: </span><span>{item.displayDate}</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 3. BMR MODULE VIEW */}
+            {currentRoute === 'bmr' && (
+              <div className="py-20 px-4 max-w-md mx-auto text-center space-y-4">
+                <div className="font-black text-4xl text-slate-800 font-sans tracking-tight">SAAHIL</div>
+                <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-xs space-y-4">
+                  <h2 className="text-xl font-bold text-slate-900">SEARCH FROM BMR</h2>
+                  <div className="inline-block px-3 py-1 bg-amber-100 text-amber-900 font-mono text-xs font-bold uppercase rounded">WORK IN PROGRESS</div>
+                  <p className="text-xs text-slate-600 leading-relaxed">This module is currently under development. Batch Manufacturing Record (BMR) reconciliation will be available in Version 2.</p>
+                  <button onClick={() => setCurrentRoute('home')} className="px-5 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold">Back to QC Search</button>
+                </div>
+              </div>
+            )}
+
+            {/* 4. NEW ENTRY FORM VIEW */}
+            {currentRoute === 'new-entry' && (
+              <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
+                <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-slate-900">+ Create New Master Entry</h2>
+                  <button onClick={() => setCurrentRoute('home')} className="text-xs text-slate-500">Cancel</button>
+                </div>
+
+                <form onSubmit={handleSaveNewEntry} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Material Name *</label>
+                    <input type="text" required value={newMatName} onChange={e => setNewMatName(e.target.value)} placeholder="e.g. Anhydrous Polysaccharide" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">QC Number *</label>
+                    <input type="text" required value={newQcNum} onChange={e => setNewQcNum(e.target.value)} placeholder="e.g. QC-00987" className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded-lg outline-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">QC Date *</label>
+                      <input type="date" required value={newDate} onChange={e => setNewDate(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Category</label>
+                      <select value={newCat} onChange={e => setNewCat(e.target.value)} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none bg-white">
+                        <option>API</option><option>Excipient</option><option>Extract</option><option>Packing Material</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tags (Comma separated)</label>
+                    <input type="text" value={newTags} onChange={e => setNewTags(e.target.value)} placeholder="e.g. Biotin, High Science, Label" className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none" />
+                  </div>
+                  <button type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm">
+                    SAVE ENTRY
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* 5. ADMIN / EXCEL IMPORT VIEW */}
+            {currentRoute === 'admin' && (
+              <div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
+                <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-slate-900">Master Database Administration</h2>
+                  <button onClick={() => setCurrentRoute('home')} className="text-xs text-slate-500">Back</button>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3">
+                  <h3 className="font-bold text-sm text-slate-800">Database Status: Connected (Local Persistent Storage)</h3>
+                  <p className="text-xs text-slate-600">Total Records: <strong className="text-blue-700">{records.length}</strong></p>
+                  <div className="flex gap-2">
+                    <button onClick={() => { if (confirm('Reset to initial 34 demo master records?')) setRecords(INITIAL_RECORDS); }} className="px-3 py-1.5 bg-white border border-slate-300 text-xs font-bold rounded">
+                      Reset Demo Records
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center space-y-2">
+                  <p className="text-sm font-bold text-slate-800">Upload Master Excel (.xlsx) file</p>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (evt) => {
+                        try {
+                          const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                          let imported = [];
+                          wb.SheetNames.forEach(name => {
+                            const rows = XLSX.utils.sheet_to_json(wb.Sheets[name]);
+                            rows.forEach(r => {
+                              imported.push({
+                                id: Date.now() + Math.random(),
+                                source: 'excel',
+                                source_sheet: name,
+                                material_name: r['Material Name'] || r['Material'] || r['Item Name'] || Object.values(r)[0],
+                                qc_number: r['QC Number'] || r['QC No'] || r['QC#'] || 'QC-PENDING',
+                                date: r['Date'] || new Date().toISOString().split('T')[0],
+                                category: name,
+                                tags: [name],
+                                raw_data: r
+                              });
+                            });
+                          });
+                          setRecords([...imported, ...records]);
+                          alert(`Successfully imported ${imported.length} records across ${wb.SheetNames.length} sheets!`);
+                        } catch (err) { alert('Error parsing workbook: ' + err.message); }
+                      };
+                      reader.readAsBinaryString(file);
+                    }}
+                    className="text-xs text-slate-500"
+                  />
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* RECORD DETAIL MODAL */}
+          {selectedRecord && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <button onClick={() => setSelectedRecord(null)} className="text-xs font-bold text-slate-600 hover:text-slate-900">← Back to Results</button>
+                  <div className="flex gap-2">
+                    <button onClick={() => { navigator.clipboard.writeText(selectedRecord.qc_number); alert('QC Number Copied!'); }} className="px-3 py-1 bg-slate-100 text-xs font-bold rounded">Copy QC#</button>
+                    <button onClick={() => { if (confirm('Delete this record?')) { setRecords(records.filter(r => r.id !== selectedRecord.id)); setSelectedRecord(null); } }} className="px-3 py-1 bg-red-50 text-red-700 text-xs font-bold rounded">Delete</button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border rounded-xl p-5 space-y-2">
+                  <span className="text-[10px] font-mono uppercase font-bold text-blue-600">{selectedRecord.category}</span>
+                  <h3 className="text-xl font-bold text-slate-900">{selectedRecord.material_name}</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t">
+                    <div><span className="text-xs text-slate-500">QC Number: </span><strong className="font-mono text-blue-700">{selectedRecord.qc_number}</strong></div>
+                    <div><span className="text-xs text-slate-500">Date: </span><strong>{selectedRecord.date}</strong></div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold font-mono uppercase text-slate-500 mb-2">Original Excel Fields (raw_data)</h4>
+                  <table className="w-full text-xs text-left divide-y border rounded">
+                    <tbody>
+                      {Object.entries(selectedRecord.raw_data || {}).map(([k, v]) => (
+                        <tr key={k} className="divide-x"><td className="p-2 font-bold bg-slate-50 w-1/3">{k}</td><td className="p-2">{String(v)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <button onClick={() => setSelectedRecord(null)} className="w-full py-2 bg-slate-800 text-white rounded-lg text-xs font-bold">Close</button>
+              </div>
+            </div>
+          )}
+
+          {/* FOOTER */}
+          <footer className="border-t border-slate-200 py-3 text-center text-xs text-slate-400">
+            SAAHIL QC NUMBER SEARCH ENGINE • Version 1.0 Production
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

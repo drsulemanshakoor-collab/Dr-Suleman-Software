@@ -1,0 +1,6 @@
+{
+  "name": "SAHIL QC Number Search Engine",
+  "description": "Internal pharmaceutical raw-material QC search engine and AI-assisted search interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

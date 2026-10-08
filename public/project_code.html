@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAAHIL QC Number Search Engine — Full Project Source Code</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <style>
+    pre { border-radius: 0.5rem; max-height: 600px; overflow-y: auto; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+  <header class="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-30 backdrop-blur px-6 py-4 flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        <span class="text-blue-500">S</span><span class="text-red-500">A</span><span class="text-amber-500">A</span><span class="text-sky-400">H</span><span class="text-emerald-500">I</span><span class="text-red-500">L</span>
+        <span class="text-slate-300 text-sm font-mono ml-2">QC NUMBER SEARCH ENGINE — Complete Codebase</span>
+      </h1>
+      <p class="text-xs text-slate-400 mt-0.5">Overall Production Architecture, Backend, Database, Algorithms & Frontend Components</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+        Live Application
+      </a>
+      <a href="/standalone.html" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition-colors">
+        Offline Standalone Version
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-12">
+    <!-- Architecture Overview -->
+    <section class="bg-slate-950 border border-slate-800 rounded-xl p-6">
+      <h2 class="text-lg font-bold text-white mb-2">📁 Project Structure Overview</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-slate-300">
+        <div class="bg-slate-900 p-4 rounded-lg border border-slate-800/80">
+          <p class="font-bold text-blue-400 mb-1">Backend & Database Architecture:</p>
+          <ul class="space-y-1 text-slate-400">
+            <li>• <strong class="text-slate-200">server.ts</strong>: Express fullstack server with Vite middleware, search API, CRUD & import</li>
+            <li>• <strong class="text-slate-200">server/database/db.ts</strong>: SQLite persistent disk storage layer (sql.js)</li>
+            <li>• <strong class="text-slate-200">server/repositories/materialRepository.ts</strong>: Repository layer with token matching, tags & CRUD</li>
+            <li>• <strong class="text-slate-200">server/services/normalizer.ts</strong>: Strict material identity matching (APS ≠ CAPSULE)</li>
+            <li>• <strong class="text-slate-200">server/services/aiService.ts</strong>: Real Gemini AI integration (@google/genai)</li>
+            <li>• <strong class="text-slate-200">server/services/excelParser.ts</strong>: Dynamic multi-sheet Excel (.xlsx) parser</li>
+            <li>• <strong class="text-slate-200">server/services/seedData.ts</strong>: Master pharmaceutical demo dataset (APIs, Labels, Excipients)</li>
+          </ul>
+        </div>
+        <div class="bg-slate-900 p-4 rounded-lg border border-slate-800/80">
+          <p class="font-bold text-emerald-400 mb-1">Frontend React + TypeScript Architecture:</p>
+          <ul class="space-y-1 text-slate-400">
+            <li>• <strong class="text-slate-200">src/App.tsx</strong>: Main SPA controller and URL routing</li>
+            <li>• <strong class="text-slate-200">src/pages/HomePage.tsx</strong>: Google-style landing search engine with SAAHIL logo</li>
+            <li>• <strong class="text-slate-200">src/pages/SearchResultsPage.tsx</strong>: Month-grouped results cards with AI context</li>
+            <li>• <strong class="text-slate-200">src/pages/NewEntryPage.tsx</strong>: + NEW ENTRY form for direct database creation</li>
+            <li>• <strong class="text-slate-200">src/pages/AdminImportPage.tsx</strong>: Excel upload, replace/merge & database management</li>
+            <li>• <strong class="text-slate-200">src/pages/BmrPage.tsx</strong>: Search from BMR modular route (Work In Progress)</li>
+            <li>• <strong class="text-slate-200">src/components/MaterialDetailModal.tsx</strong>: Full dynamic record viewer, EDIT mode & copy QC#</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: SERVER.TS -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-amber-400 font-mono">1. server.ts (Express Full-Stack Server & APIs)</h3>
+        <button onclick="copyCode('code-server')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">Copy Code</button>
+      </div>
+      <pre><code id="code-server" class="language-typescript">// Express server with Vite middleware, SQLite persistence, and Gemini AI endpoints
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+import * as XLSX from 'xlsx';
+import { dbService } from './server/database/db';
+import { materialRepository } from './server/repositories/materialRepository';
+import { previewWorkbook, parseWorkbookToRecords } from './server/services/excelParser';
+import { aiQueryService } from './server/services/aiService';
+import { getPharmaMasterDemoRecords } from './server/services/seedData';
+
+dotenv.config();
+
+const app = express();
+const PORT = Number(process.env.PORT) || 3000;
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const isXlsx =
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.mimetype === 'application/vnd.ms-excel' ||
+      file.originalname.toLowerCase().endsWith('.xlsx') ||
+      file.originalname.toLowerCase().endsWith('.xls');
+    if (isXlsx) cb(null, true);
+    else cb(new Error('Only Excel (.xlsx, .xls) files are accepted'));
+  },
+});
+
+let dbInitialized = false;
+async function initializeAppDatabase() {
+  if (dbInitialized) return;
+  await dbService.init();
+  const status = await materialRepository.getStatus();
+  if (status.totalRecords === 0) {
+    const demoRecords = getPharmaMasterDemoRecords();
+    await materialRepository.importRecords(demoRecords, 'replace', 'master_raw_materials.xlsx');
+  }
+  dbInitialized = true;
+}
+
+// GET /api/status - Master Database Status
+app.get('/api/status', async (req, res) => {
+  try {
+    await initializeAppDatabase();
+    const status = await materialRepository.getStatus();
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/search - QC Search Engine with Tags and AI Context
+app.get('/api/search', async (req, res) => {
+  try {
+    await initializeAppDatabase();
+    const q = String(req.query.q || '').trim();
+    const useAi = req.query.ai === 'true' || req.query.ai === '1';
+
+    let queryTags: string[] = [];
+    if (req.query.tags) {
+      if (Array.isArray(req.query.tags)) {
+        queryTags = (req.query.tags as string[]).map(t => String(t).trim()).filter(Boolean);
+      } else {
+        queryTags = String(req.query.tags).split(',').map(t => t.trim()).filter(Boolean);
+      }
+    }
+
+    if (!q && queryTags.length === 0) {
+      return res.json({ query: '', tags: [], total: 0, results: [], groupedByMonth: [] });
+    }
+
+    let searchTarget = q;
+    let aiSynonyms: string[] = [];
+    let interpretationInfo: any = undefined;
+    let extractedTags: string[] = [];
+
+    const isNaturalLanguage = q.includes(' ') && (
+      /\b(show|find|search|get|list|all|qc|number|numbers|from|in|for|labels?)\b/i.test(q)
+    );
+
+    if (useAi || isNaturalLanguage) {
+      try {
+        const aiInterp = await Promise.race([
+          aiQueryService.interpretQuery(q),
+          new Promise<any>((_, reject) => setTimeout(() => reject(new Error('AI timeout')), 3000)),
+        ]);
+        if (aiInterp && aiInterp.isAiInterpreted) {
+          searchTarget = aiInterp.materialQuery || q;
+          aiSynonyms = aiInterp.synonyms || [];
+          extractedTags = aiInterp.tags || [];
+          interpretationInfo = aiInterp;
+        }
+      } catch (aiErr) {}
+    }
+
+    const combinedTags = Array.from(new Set([...queryTags, ...extractedTags]));
+    let searchResponse = await materialRepository.search(searchTarget, {
+      tags: combinedTags,
+      aiSynonyms,
+    });
+
+    if (interpretationInfo) searchResponse.interpretedQuery = interpretationInfo;
+
+    try {
+      const explanation = await Promise.race([
+        aiQueryService.generateExplanation(q || searchTarget, searchResponse.results, combinedTags),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+      ]);
+      searchResponse.aiExplanation = explanation;
+    } catch {}
+
+    res.json(searchResponse);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Search service is temporarily unavailable.' });
+  }
+});
+
+// POST /api/material - Create Manual Entry (+ NEW ENTRY)
+app.post('/api/material', async (req, res) => {
+  try {
+    await initializeAppDatabase();
+    const { material_name, qc_number, date, category, tags, supplier, batch_number, manufacturer, status, label, remarks, raw_data } = req.body;
+    if (!material_name || !String(material_name).trim()) return res.status(400).json({ error: 'Material Name is required' });
+    if (!qc_number || !String(qc_number).trim()) return res.status(400).json({ error: 'QC Number is required' });
+
+    const newRecord = await materialRepository.createEntry({
+      source: 'manual',
+      source_sheet: 'Manual Entries',
+      material_name: material_name.trim(),
+      qc_number: qc_number.trim(),
+      date: date || new Date().toISOString().split('T')[0],
+      category: category || 'Manual',
+      tags: tags || [],
+      raw_data: raw_data || {
+        'Material Name': material_name.trim(),
+        'QC Number': qc_number.trim(),
+        'Date': date,
+        'Category': category,
+        'Source': 'Manual Entry',
+      },
+    });
+    res.status(201).json(newRecord);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/material/:id - Edit Record
+app.put('/api/material/:id', async (req, res) => {
+  try {
+    await initializeAppDatabase();
+    const id = parseInt(req.params.id, 10);
+    const updated = await materialRepository.updateEntry(id, req.body);
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/material/:id - Delete Record
+app.delete('/api/material/:id', async (req, res) => {
+  try {
+    await initializeAppDatabase();
+    const id = parseInt(req.params.id, 10);
+    await materialRepository.deleteEntry(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default app;</code></pre>
+    </section>
+
+    <!-- SECTION 2: NORMALIZER.TS -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-amber-400 font-mono">2. server/services/normalizer.ts (Strict Material Identity Engine)</h3>
+        <button onclick="copyCode('code-norm')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">Copy Code</button>
+      </div>
+      <pre><code id="code-norm" class="language-typescript">/**
+ * Normalization & Search Scoring Engine
+ * Adheres strictly to material identity matching: APS matches Anhydrous Polysaccharide, NOT Capsule!
+ */
+
+export const PHARMA_SYNONYMS: Record<string, string[]> = {
+  aps: ['anhydrous polysaccharide', 'aps grade x', 'aps pharma'],
+  mcc: ['microcrystalline cellulose', 'cellulose microcrystalline', 'avicel'],
+  pvp: ['polyvinylpyrrolidone', 'povidone', 'polyvidone'],
+  pvpk30: ['polyvinylpyrrolidone k30', 'povidone k30'],
+  hpmc: ['hydroxypropyl methylcellulose', 'hypromellose'],
+  ipa: ['isopropyl alcohol', 'isopropanol'],
+  sls: ['sodium lauryl sulfate', 'sds'],
+  dcp: ['dicalcium phosphate'],
+  peg: ['polyethylene glycol'],
+  bht: ['butylated hydroxytoluene'],
+  bha: ['butylated hydroxyanisole'],
+  cmc: ['carboxymethylcellulose'],
+  paracetamol: ['acetaminophen', 'apap'],
+  acetaminophen: ['paracetamol', 'apap'],
+};
+
+export function normalizeString(str: string | null | undefined): string {
+  if (!str) return '';
+  return str.toLowerCase().replace(/[_\-\/\.\,\;\:\(\)\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function tokenize(str: string): string[] {
+  return normalizeString(str).split(' ').map(t => t.trim()).filter(t => t.length > 0);
+}
+
+export function calculateMaterialRelevance(
+  query: string,
+  materialName: string,
+  qcNumber?: string,
+  category?: string,
+  aiSynonyms: string[] = []
+): { score: number; matchType: 'exact' | 'normalized' | 'token' | 'alias' | 'semantic' | 'related' | 'none'; matchedField: string } {
+  const normQuery = normalizeString(query);
+  const rawQuery = (query || '').trim().toLowerCase();
+  const normMaterial = normalizeString(materialName);
+  const rawMaterial = (materialName || '').trim().toLowerCase();
+  const normQc = normalizeString(qcNumber || '');
+  const rawQc = (qcNumber || '').trim().toLowerCase();
+
+  if (!normQuery) return { score: 0, matchType: 'none', matchedField: '' };
+
+  // 1. Direct QC Number Match
+  if (rawQc === rawQuery || normQc === normQuery) {
+    return { score: 100, matchType: 'exact', matchedField: 'qc_number' };
+  }
+
+  // 2. Exact Raw Material Name
+  if (rawMaterial === rawQuery) {
+    return { score: 100, matchType: 'exact', matchedField: 'material_name' };
+  }
+
+  // 3. Exact Normalized Name
+  if (normMaterial === normQuery) {
+    return { score: 95, matchType: 'normalized', matchedField: 'material_name' };
+  }
+
+  // 4. Acronym and Known Pharmaceutical Alias Match
+  const knownSynonyms = PHARMA_SYNONYMS[normQuery] || [];
+  for (const syn of knownSynonyms) {
+    if (normMaterial === syn || normMaterial.startsWith(syn + ' ') || normMaterial.endsWith(' ' + syn) || normMaterial.includes(syn)) {
+      return { score: 90, matchType: 'alias', matchedField: 'alias' };
+    }
+  }
+
+  // Reverse dictionary synonyms
+  for (const [canonicalKey, aliasList] of Object.entries(PHARMA_SYNONYMS)) {
+    if (aliasList.includes(normQuery) || canonicalKey === normQuery) {
+      if (normMaterial === canonicalKey || normMaterial.includes(canonicalKey) || aliasList.some(alias => normMaterial === alias || normMaterial.includes(alias))) {
+        return { score: 90, matchType: 'alias', matchedField: 'reverse_alias' };
+      }
+    }
+  }
+
+  // 5. Discrete Token Matching (Whole Words Only)
+  const queryTokens = tokenize(query);
+  const materialTokens = tokenize(materialName);
+
+  if (queryTokens.length === 1) {
+    const singleToken = queryTokens[0];
+    if (materialTokens.includes(singleToken)) {
+      return { score: 85, matchType: 'token', matchedField: 'material_name_token' };
+    }
+    // STRICT RULE: Reject substring containment (e.g. 'aps' inside 'capsule')
+    return { score: 0, matchType: 'none', matchedField: '' };
+  }
+
+  // Multi-Token Phrase Matching
+  const allTokensMatched = queryTokens.every(qToken =>
+    materialTokens.some(mToken => mToken === qToken || (qToken.length >= 4 && mToken.startsWith(qToken)))
+  );
+  if (allTokensMatched) {
+    return { score: 80, matchType: 'token', matchedField: 'all_tokens' };
+  }
+
+  return { score: 0, matchType: 'none', matchedField: '' };
+}</code></pre>
+    </section>
+
+    <!-- SECTION 3: APP.TSX -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-amber-400 font-mono">3. src/App.tsx (Main React Application Controller)</h3>
+        <button onclick="copyCode('code-app')" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">Copy Code</button>
+      </div>
+      <pre><code id="code-app" class="language-tsx">import React, { useState, useEffect } from 'react';
+import { Header } from './components/Header';
+import { HomePage } from './pages/HomePage';
+import { SearchResultsPage } from './pages/SearchResultsPage';
+import { BmrPage } from './pages/BmrPage';
+import { AdminImportPage } from './pages/AdminImportPage';
+import { NewEntryPage } from './pages/NewEntryPage';
+import { DatabaseStatus, SearchResponse } from './types';
+import { api } from './services/api';
+
+export default function App() {
+  const [currentRoute, setCurrentRoute] = useState<'home' | 'search' | 'bmr' | 'admin' | 'new-entry'>('home');
+  const [status, setStatus] = useState<DatabaseStatus | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTags, setSearchTags] = useState<string[]>([]);
+  const [searchResponse, setSearchResponse] = useState<SearchResponse | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const parseUrl = () => {
+      const path = window.location.pathname;
+      const searchParams = new URLSearchParams(window.location.search);
+      const q = searchParams.get('q');
+      const tagsParam = searchParams.get('tags');
+      const parsedTags = tagsParam ? tagsParam.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+      if (path === '/bmr') setCurrentRoute('bmr');
+      else if (path === '/admin' || path === '/admin/import') setCurrentRoute('admin');
+      else if (path === '/admin/new-entry' || path === '/new-entry') setCurrentRoute('new-entry');
+      else if (q || parsedTags.length > 0) {
+        setCurrentRoute('search');
+        setSearchQuery(q || '');
+        setSearchTags(parsedTags);
+        executeSearch(q || '', { tags: parsedTags });
+      } else setCurrentRoute('home');
+    };
+    parseUrl();
+    window.addEventListener('popstate', parseUrl);
+    return () => window.removeEventListener('popstate', parseUrl);
+  }, []);
+
+  const fetchStatus = () => {
+    api.getStatus().then(setStatus).catch(console.warn);
+  };
+
+  useEffect(() => { fetchStatus(); }, []);
+
+  const handleNavigate = (route: 'home' | 'search' | 'bmr' | 'admin' | 'new-entry') => {
+    setCurrentRoute(route);
+    if (route === 'home') window.history.pushState({}, '', '/');
+    else if (route === 'bmr') window.history.pushState({}, '', '/bmr');
+    else if (route === 'admin') window.history.pushState({}, '', '/admin');
+    else if (route === 'new-entry') window.history.pushState({}, '', '/admin/new-entry');
+    else if (route === 'search') {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set('q', searchQuery);
+      if (searchTags.length > 0) params.set('tags', searchTags.join(','));
+      window.history.pushState({}, '', `/?${params.toString()}`);
+    }
+  };
+
+  const executeSearch = async (query: string, options: { tags?: string[]; useAi?: boolean } = {}) => {
+    const trimmed = query.trim();
+    const activeTags = options.tags || searchTags;
+    if (!trimmed && activeTags.length === 0) return;
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchQuery(trimmed);
+    setSearchTags(activeTags);
+    setCurrentRoute('search');
+
+    try {
+      const response = await api.search(trimmed, { tags: activeTags, useAi: options.useAi });
+      setSearchResponse(response);
+    } catch (err: any) {
+      setSearchError(err.message || 'Unable to perform search');
+      setSearchResponse(null);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white text-slate-900 font-sans antialiased">
+      <Header currentRoute={currentRoute} onNavigate={handleNavigate} compactLogo={currentRoute === 'search'} totalRecords={status?.totalRecords} />
+      <main>
+        {currentRoute === 'home' && <HomePage onSearch={executeSearch} onNavigate={handleNavigate} status={status} isLoading={searchLoading} />}
+        {currentRoute === 'search' && (
+          <SearchResultsPage
+            searchResponse={searchResponse}
+            query={searchQuery}
+            tags={searchTags}
+            onSearch={executeSearch}
+            onNavigate={handleNavigate}
+            isLoading={searchLoading}
+            error={searchError}
+            onRecordUpdated={() => { fetchStatus(); executeSearch(searchQuery, { tags: searchTags }); }}
+          />
+        )}
+        {currentRoute === 'bmr' && <BmrPage onNavigate={handleNavigate} />}
+        {currentRoute === 'admin' && <AdminImportPage status={status} onRefreshStatus={fetchStatus} onNavigate={handleNavigate} />}
+        {currentRoute === 'new-entry' && <NewEntryPage onNavigate={handleNavigate} onRecordCreated={fetchStatus} />}
+      </main>
+    </div>
+  );
+}</code></pre>
+    </section>
+  </main>
+
+  <script>
+    function copyCode(id) {
+      const el = document.getElementById(id);
+      navigator.clipboard.writeText(el.innerText).then(() => {
+        alert('Code copied to clipboard!');
+      });
+    }
+  </script>
+</body>
+</html>
